@@ -21,7 +21,7 @@ import itertools
 fcperiod = 12
 
 #sales history data
-data = pd.DataFrame(pd.read_excel(r'C:\Users\PhamGiaPhu\OneDrive - DuyTan Plastics\Script\AS - Prophet.xlsx',index_col=0))
+data = pd.DataFrame(pd.read_excel(r'C:\Users\PhamGiaPhu\OneDrive - DuyTan Plastics\Script\AS - Prophet.xlsx',sheet_name = "B2C",index_col=0))
 data.index.freq = 'MS'
 
 #exog
@@ -30,6 +30,9 @@ wd = pd.read_excel(r'C:\Users\PhamGiaPhu\OneDrive - DuyTan Plastics\Master Data\
 #temperature 
 temperature = pd.read_excel(r'C:\Users\PhamGiaPhu\OneDrive - DuyTan Plastics\Master Data\Temperature.xlsx',sheet_name = "Sheet1",index_col=0)
 
+
+df_param = pd.DataFrame(data={'Model': ['XGB','LightGBM']})
+df_rmse = pd.DataFrame(data={'Model': ['XGB','LightGBM']})
 
 
 #PRE-FORECAST FUNCTION
@@ -93,7 +96,8 @@ def optimal_fc(df: pd.DataFrame()):
         xgboost = XGBRegressor(**params,objective='reg:squarederror')
         xgboost.fit(X_train, y_train)
         xgb_list.append(np.sqrt(MSE(y_train, xgboost.predict(X_train)))  )
-      
+    
+    rmse_xgb = np.sqrt(MSE(y_train, xgboost.predict(X_train)))
     minxgb = xgb_all_params[np.argmin(xgb_list)]
     
     
@@ -104,7 +108,7 @@ def optimal_fc(df: pd.DataFrame()):
         'n_estimators': [10,300,1000],
         #'max_leaves': [5,15,30],
         'num_leaves': [2,10,20],
-        #'min_gain_to_split': [0,10,20],
+        'min_gain_to_split': [3,10,20],
         'min_sum_hessian_in_leaf': [1,10]
                         }
     
@@ -113,27 +117,13 @@ def optimal_fc(df: pd.DataFrame()):
     lgbm_list =[]
     for params in lgbm_all_params:
         lgbm = LGBMRegressor(**params)
-        lgbm.fit(X_train, y_train,verbose=False)
+        lgbm.fit(X_train, y_train)
         lgbm_list.append(np.sqrt(MSE(y_train, lgbm.predict(X_train)))  )
       
+    rmse_lgbm = np.sqrt(MSE(y_train, lgbm.predict(X_train)))
     minlgbm = lgbm_all_params[np.argmin(lgbm_list)]
     
-    return minxgb, minlgbm
-
-
-
-
-
-
-
-
-
-def test(*test):
-    new_dict = {}
-    for i in test:
-        for a, b in i.items():
-            new_dict[a] = b
-    return new_dict
+    return minxgb, minlgbm, rmse_xgb, rmse_lgbm
 
 
 
@@ -148,7 +138,7 @@ def xgboost_forecast(df: pd.DataFrame(),*args):
     X_train = X.head(len(X)-1)
     X_test = X.tail(1)
     y_train = y.head(len(y)-1)
-    y_test = y.tail(1)
+    #y_test = y.tail(1)
     
     minxgb = {}
     for i in args:
@@ -220,7 +210,7 @@ def lightgbm_forecast(df: pd.DataFrame(),*args):
     X_train = X.head(len(X)-1)
     X_test = X.tail(1)
     y_train = y.head(len(y)-1)
-    y_test = y.tail(1)
+    #y_test = y.tail(1)
     
     
     '''
@@ -304,10 +294,20 @@ def lightgbm_forecast(df: pd.DataFrame(),*args):
 df_XGB = pd.DataFrame()
 df_LGBM = pd.DataFrame()
 df_fc = pd.DataFrame()
+df_best = pd.DataFrame()
 
 for sku in list(data):
     df = pd.DataFrame(data[sku].copy(deep=True))
-    minxgb, minlgbm = optimal_fc(df)
+    minxgb, minlgbm, rmse_xgb, rmse_lgbm = optimal_fc(df)
+    df_param[sku] = np.nan
+    df_param[sku] = df_param[sku].astype('object')
+    df_param.at[df_param[df_param['Model'] == 'XGB'].index[0],sku] = ( minxgb  )
+    df_param.at[df_param[df_param['Model'] == 'LightGBM'].index[0],sku] = ( minlgbm  )
+    
+    df_rmse[sku] = np.nan
+    df_rmse[sku] = df_rmse[sku].astype('object')
+    df_rmse.at[df_param[df_rmse['Model'] == 'XGB'].index[0],sku] = rmse_xgb
+    df_rmse.at[df_param[df_rmse['Model'] == 'LightGBM'].index[0],sku] = rmse_lgbm
     
 
     for i in range(1,fcperiod+1):
@@ -328,8 +328,23 @@ for sku in list(data):
         time_features(df_fc)
         df_fc.iloc[-1:,0] = xgboost_forecast(df_fc,minxgb)
     df_XGB[sku] = df_fc[sku].tail(fcperiod)
+    
+    if rmse_lgbm < rmse_xgb:
+        df_best[sku] = df_LGBM[sku]
+    else:
+        df_best[sku] = df_XGB[sku]
+        
+    
 
 
+
+
+
+
+pd.concat([df_XGB,df_LGBM],axis=0).to_excel('MLFC_Full.xlsx')
+df_param.to_excel('MLFC_Param.xlsx')
+df_rmse.to_excel('MLFC_RMSE.xlsx')
+df_best.to_excel('MLFC.xlsx')
 
 
 '''
@@ -340,5 +355,7 @@ ax.plot(df_XGB[sku], label='XGB')
 plt.legend()
 plt.show()
 '''
+
+
 
 
