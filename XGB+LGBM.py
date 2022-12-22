@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Sep 19 20:19:23 2022
+Created on Fri Dec  2 10:26:30 2022
 
 @author: PhamGiaPhu
 """
+
 import numpy as np 
 import pandas as pd 
 import seaborn as sns
@@ -18,17 +19,22 @@ from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 import itertools
 
+import os
+username = os.getlogin()
+
+
 fcperiod = 12
 
+
 #sales history data
-data = pd.DataFrame(pd.read_excel(r'C:\Users\PhamGiaPhu\OneDrive - DuyTan Plastics\Script\AS - Prophet.xlsx',sheet_name = "B2C",index_col=0))
+data = pd.DataFrame(pd.read_excel(r'C:\Users\{}\OneDrive - DuyTan Plastics\BI Planning\AS - FC.xlsx'.format(username),sheet_name = "B2C",index_col=0))
 data.index.freq = 'MS'
 
 #exog
 #working day
-wd = pd.read_excel(r'C:\Users\PhamGiaPhu\OneDrive - DuyTan Plastics\Master Data\WD.xlsx',sheet_name = "Sheet1",index_col=0)
+wd = pd.read_excel(r'C:\Users\{}\OneDrive - DuyTan Plastics\BI Planning\WD.xlsx'.format(username),sheet_name = "Sheet1",index_col=0)
 #temperature 
-temperature = pd.read_excel(r'C:\Users\PhamGiaPhu\OneDrive - DuyTan Plastics\Master Data\Temperature.xlsx',sheet_name = "Sheet1",index_col=0)
+temperature = pd.read_excel(r'C:\Users\{}\OneDrive - DuyTan Plastics\BI Planning\Temperature.xlsx'.format(username),sheet_name = "Sheet1",index_col=0)
 
 
 df_param = pd.DataFrame(data={'Model': ['XGB','LightGBM']})
@@ -335,16 +341,15 @@ for sku in list(data):
         df_best[sku] = df_XGB[sku]
         
     
+df_XGB['Model'] = 'XGB'
+df_LGBM['Model'] = 'LightGBM'
 
 
 
-
-
-
-pd.concat([df_XGB,df_LGBM],axis=0).to_excel('MLFC_Full.xlsx')
-df_param.to_excel('MLFC_Param.xlsx')
-df_rmse.to_excel('MLFC_RMSE.xlsx')
-df_best.to_excel('MLFC.xlsx')
+pd.concat([df_XGB,df_LGBM],axis=0).to_excel(r'C:\Users\{}\Downloads\MLFC_Full.xlsx'.format(username))
+df_param.to_excel(r'C:\Users\{}\Downloads\MLFC_Params.xlsx'.format(username))
+df_rmse.to_excel(r'C:\Users\{}\Downloads\MLFC_RMSE.xlsx'.format(username))
+df_best.to_excel(r'C:\Users\{}\Downloads\MLFC.xlsx'.format(username))
 
 
 '''
@@ -355,6 +360,10 @@ ax.plot(df_XGB[sku], label='XGB')
 plt.legend()
 plt.show()
 '''
+
+
+
+
 
 
 
