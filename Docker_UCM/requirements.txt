@@ -1,0 +1,13 @@
+datetime
+matplotlib
+pandas
+numpy
+statsmodels
+google-cloud-bigquery
+google-cloud-storage
+google-api-python-client
+google
+db-dtypes
+scipy==1.7.3
+scikit-learn==1.2.1
+scikit-optimize==0.9.0
